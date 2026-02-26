@@ -1,0 +1,163 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <title>语文生字展示</title>
+    <style>
+        /* 极简基础样式 */
+        body { font-family: Arial, sans-serif; margin: 20px; }
+        .item { margin: 15px 0; padding-bottom: 10px; border-bottom: 1px dashed #ccc; }
+        .title-bar { font-weight: bold; margin-bottom: 8px; }
+        .paste-page { color: #666; margin-left: 10px; }
+        .words-group { margin: 10px 0; }
+        .words-label { font-size: 14px; color: #333; display: inline-block; vertical-align: top; margin-right: 8px; }
+        /* 拼音+汉字容器样式 */
+        .words-list { display: inline-block; }
+        /* 简化的水平分隔线 */
+        .thin-separator {
+            border: none;
+            border-top: 1px solid #ccc;
+            margin: 4px 0;
+            height: 0;
+        }
+        .word-pinyin-wrap { 
+            display: inline-block; 
+            text-align: center; 
+            margin-right: 12px; 
+            line-height: 1.2;
+        }
+        .pinyin { 
+            font-size: 20px; /* doubled from 10px */
+            color: #999; 
+            height: 28px; /* approximate height doubled */
+            display: block; 
+            visibility: hidden; /* 默认隐藏拼音 */
+        }
+        .hanzi { font-size: 28px; display: block; }
+        /* adjust wrap spacing for larger text */
+        .word-pinyin-wrap { 
+            display: inline-block; 
+            text-align: center; 
+            margin-right: 20px; /* increased to accommodate size */
+            line-height: 1.2;
+        }
+        /* 按钮样式 */
+        #togglePinyin, #printBtn { 
+            margin-bottom: 20px; 
+            padding: 5px 10px; 
+            border: 1px solid #ccc; 
+            background: #f5f5f5; 
+            cursor: pointer;
+            margin-right: 8px;
+        }
+
+        /* 打印时隐藏控件，pinyin 显示由当前状态决定 */
+        @media print {
+            #togglePinyin, #printBtn { display: none !important; }
+            /* 让每个条目（标题+词语）不被分页拆开 */
+            .item {
+                page-break-inside: avoid;
+                break-inside: avoid;
+            }
+        }
+    </style>
+</head>
+<body>
+    <button id="togglePinyin">显示拼音</button>
+    <button id="printBtn">打印页面</button>
+    <div id="content"></div>
+
+    <script src="data.js"></script>
+    <script src="pinyinDict.js"></script>
+    <script>
+        // 拼音库（覆盖data.js中所有词汇，精准匹配）
+        // 初始化数据（适配原data.js的纯数组格式）
+        const contentEl = document.getElementById('content');
+        const toggleBtn = document.getElementById('togglePinyin');
+        let isPinyinShow = false;
+
+        // 渲染生字列表
+        function renderWords(words) {
+            let html = '';
+            words.forEach(word => {
+                const pinyin = pinyinDict[word] || '';
+                html += `
+                    <span class="word-pinyin-wrap">
+                        <span class="pinyin">${pinyin}</span>
+                        <span class="hanzi">${word}</span>
+                    </span>
+                `;
+            });
+            return html;
+        }
+
+        // 渲染页面内容
+        function renderContent() {
+            contentEl.innerHTML = '';
+            wordData.forEach(pageData => {
+                const pageSection = document.createElement('section');
+                // 移除单独的页码标题，改为在条目标题前显示
+                const pageLabel = `第 ${pageData.page} 页`;
+                
+                pageData.items.forEach(item => {
+                    const itemEl = document.createElement('div');
+                    itemEl.className = 'item';
+
+                    // 标题和页码
+                    const titleBar = document.createElement('div');
+                    titleBar.className = 'title-bar';
+                    titleBar.innerHTML = `
+                        <span class="title">${pageLabel} ${item.title}</span>
+                        <span class="paste-page">(${item.paste_page})</span>
+                    `;
+
+                    // 认读生字
+                    const readWords = document.createElement('div');
+                    readWords.className = 'words-group';
+                    readWords.innerHTML = `
+                        <div class="words-list">${renderWords(item.read_words)}</div>
+                        <hr class="thin-separator" />
+                    `;
+
+                    // 书写生字
+                    const writeWords = document.createElement('div');
+                    writeWords.className = 'words-group';
+                    writeWords.innerHTML = `
+                        <div class="words-list">${renderWords(item.write_words)}</div>
+                    `;
+
+                    // 组装条目
+                    itemEl.appendChild(titleBar);
+                    itemEl.appendChild(readWords);
+                    itemEl.appendChild(writeWords);
+                    pageSection.appendChild(itemEl);
+                });
+
+                contentEl.appendChild(pageSection);
+            });
+        }
+
+        // 切换拼音显示/隐藏
+        function togglePinyin() {
+            isPinyinShow = !isPinyinShow;
+            const allPinyin = document.querySelectorAll('.pinyin');
+            allPinyin.forEach(pinyinEl => {
+                pinyinEl.style.visibility = isPinyinShow ? 'visible' : 'hidden';
+            });
+            toggleBtn.textContent = isPinyinShow ? '隐藏拼音' : '显示拼音';
+        }
+
+        // 打印按钮点击：直接调用 print，保持当前拼音显示状态
+        const printBtn = document.getElementById('printBtn');
+        printBtn.addEventListener('click', function() {
+            window.print();
+        });
+
+        // 绑定事件
+        toggleBtn.addEventListener('click', togglePinyin);
+
+        // 初始化渲染
+        renderContent();
+    </script>
+</body>
+</html>
